@@ -21,7 +21,7 @@ else:
 def get_model():
     """Retrieve the Generative AI model and handle errors."""
     try:
-        return genai.GenerativeModel.create("gemini-pro-vision")  # ✅ Corrected Model Call
+        return genai.GenerativeModel("gemini-pro-vision")  # ✅ Fixed Model Call
     except Exception as e:
         st.error(f"❌ Error initializing AI model: {e}")
         return None
@@ -72,10 +72,11 @@ def verify_face(image_path, stored_image_path):
 
     try:
         with open(image_path, "rb") as img1, open(stored_image_path, "rb") as img2:
-            response = model.generate_content(
-                prompt="Compare these faces and return 'true' if they match, otherwise 'false'.",
-                image=[img1.read(), img2.read()]
-            )
+            response = model.generate_content([
+                "Compare these faces and return 'true' if they match, otherwise 'false'.",
+                img1.read(),
+                img2.read()
+            ])
         
         return response.text.strip().lower() == 'true'
 
