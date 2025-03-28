@@ -1,6 +1,5 @@
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image
 import os
 import json
 import hashlib
@@ -21,7 +20,7 @@ else:
 def get_model():
     """Retrieve the Generative AI model and handle errors."""
     try:
-        return genai.GenerativeModel("gemini-pro-vision")  # ✅ Fixed Model Call
+        return genai.GenerativeModel(name="gemini-pro-vision")  # ✅ Corrected Model Call
     except Exception as e:
         st.error(f"❌ Error initializing AI model: {e}")
         return None
@@ -72,11 +71,10 @@ def verify_face(image_path, stored_image_path):
 
     try:
         with open(image_path, "rb") as img1, open(stored_image_path, "rb") as img2:
-            response = model.generate_content([
-                "Compare these faces and return 'true' if they match, otherwise 'false'.",
-                img1.read(),
-                img2.read()
-            ])
+            response = model.generate_content(
+                ["Compare these faces and return 'true' if they match, otherwise 'false'."],
+                [img1.read(), img2.read()]
+            )
         
         return response.text.strip().lower() == 'true'
 
@@ -103,7 +101,8 @@ if not st.session_state.authenticated:
                 if verify_password(password, bytes.fromhex(users[username]['password'])):
                     if face_image:
                         image_path = f"temp_{username}.jpg"
-                        face_image.save(image_path)
+                        with open(image_path, "wb") as f:
+                            f.write(face_image.getbuffer())  # ✅ Fix: Save uploaded image properly
 
                         if verify_face(image_path, users[username]['face_data']):
                             st.session_state.authenticated = True
@@ -136,8 +135,8 @@ if not st.session_state.authenticated:
             elif face_image:
                 hashed_password = hash_password(new_password).hex()
                 face_path = f"face_{new_username}.jpg"
-                
-                # Save the face image
+
+                # ✅ Fix: Save the face image properly
                 with open(face_path, "wb") as f:
                     f.write(face_image.getbuffer())
 
