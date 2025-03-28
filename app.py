@@ -23,30 +23,134 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better UI
+# Enhanced Custom CSS with Tailwind-like styles
 st.markdown("""
     <style>
+    /* Main container styles */
+    .main {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    }
+
+    /* Button styles */
     .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #4CAF50;
-        color: white;
+        @apply w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        box-shadow: 0 4px 6px rgba(76, 175, 80, 0.2);
     }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(76, 175, 80, 0.3);
+    }
+    .stButton>button:active {
+        transform: translateY(0);
+    }
+
+    /* Input field styles */
     .stTextInput>div>div>input {
-        border-radius: 5px;
+        @apply w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent;
+        transition: all 0.2s ease-in-out;
     }
+    .stTextInput>div>div>input:focus {
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+
+    /* Card styles */
+    .css-1r6slb0 {  /* Streamlit's default card class */
+        @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
+        backdrop-filter: blur(10px);
+    }
+
+    /* Message styles */
     .error-msg {
-        color: #ff0000;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 10px 0;
+        @apply bg-red-50 text-red-700 p-4 rounded-lg border border-red-100 mb-4;
     }
     .success-msg {
-        color: #4CAF50;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 10px 0;
+        @apply bg-green-50 text-green-700 p-4 rounded-lg border border-green-100 mb-4;
+    }
+    .info-msg {
+        @apply bg-blue-50 text-blue-700 p-4 rounded-lg border border-blue-100 mb-4;
+    }
+
+    /* Tab styles */
+    .stTabs [data-baseweb="tab-list"] {
+        @apply gap-2 p-1 rounded-lg bg-gray-100;
+    }
+    .stTabs [data-baseweb="tab"] {
+        @apply px-6 py-2 rounded-lg font-medium transition-all duration-200;
+    }
+    .stTabs [aria-selected="true"] {
+        @apply bg-white text-green-600 shadow-sm;
+    }
+
+    /* Sidebar styles */
+    .css-1d391kg {  /* Streamlit's sidebar class */
+        @apply bg-gray-50 border-r border-gray-200;
+    }
+
+    /* Header styles */
+    h1 {
+        @apply text-4xl font-bold text-gray-900 mb-6;
+        background: linear-gradient(135deg, #1a1a1a 0%, #4CAF50 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    h2 {
+        @apply text-2xl font-semibold text-gray-800 mb-4;
+    }
+    h3 {
+        @apply text-xl font-medium text-gray-700 mb-3;
+    }
+
+    /* Camera input styles */
+    .stCamera>div {
+        @apply rounded-lg overflow-hidden border-2 border-gray-200 hover:border-green-500 transition-all duration-200;
+    }
+
+    /* Expander styles */
+    .streamlit-expanderHeader {
+        @apply bg-gray-50 hover:bg-gray-100 transition-all duration-200 rounded-lg;
+    }
+
+    /* Custom container styles */
+    .custom-container {
+        @apply bg-white rounded-xl shadow-lg p-8 border border-gray-100 mb-6;
+        backdrop-filter: blur(10px);
+    }
+
+    /* Progress indicator */
+    .progress-indicator {
+        @apply flex items-center justify-center gap-4 mb-6;
+    }
+    .progress-step {
+        @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium;
+    }
+    .progress-step.active {
+        @apply bg-green-500 text-white;
+    }
+    .progress-step.completed {
+        @apply bg-green-100 text-green-700;
+    }
+    .progress-step.pending {
+        @apply bg-gray-100 text-gray-500;
+    }
+
+    /* Custom animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .main {
+            @apply px-4;
+        }
+        h1 {
+            @apply text-3xl;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
