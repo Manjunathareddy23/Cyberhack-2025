@@ -1,228 +1,154 @@
 import streamlit as st
+import google.generativeai as genai
 import os
+import json
+import hashlib
+import hmac
 from dotenv import load_dotenv
-from utils.auth import load_users, save_users, hash_password, verify_password
-from utils.face_verification import verify_face
 
 # Load environment variables
 load_dotenv()
 
-# Streamlit Page Config
-st.set_page_config(
-    page_title="🔒 Secure Authentication System", 
-    page_icon="🔑", 
-    layout="wide"
-)
+# Configure Gemini API
+API_KEY = os.getenv('GEMINI_API_KEY')
 
-# Session State Initialization
+if not API_KEY:
+    st.error("⚠️ GEMINI_API_KEY not found in environment variables!")
+else:
+    genai.configure(api_key=API_KEY)
+
+def get_model():
+    """Retrieve the Generative AI model and handle errors."""
+    try:
+        return genai.GenerativeModel(name="gemini-pro-vision")  # ✅ Corrected Model Call
+    except Exception as e:
+        st.error(f"❌ Error initializing AI model: {e}")
+        return None
+
+# Streamlit Page Config
+st.set_page_config(page_title="🔒 Secure Authentication System", page_icon="🔑", layout="wide")
+
+# Session State
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'user_data' not in st.session_state:
     st.session_state.user_data = {}
-if 'temp_files' not in st.session_state:
-    st.session_state.temp_files = []
 
 # Constants
 USERS_DB = "users.json"
-FACE_STORAGE_DIR = "face_data"
 
-# Create face storage directory if it doesn't exist
-if not os.path.exists(FACE_STORAGE_DIR):
-    os.makedirs(FACE_STORAGE_DIR)
-
-# Main UI
-def main():
-    st.title("🔒 Secure Three-Factor Authentication System")
-    
-    if not st.session_state.authenticated:
-        display_authentication_ui()
-    else:
-        display_authenticated_ui()
-
-def display_authentication_ui():
-    tab1, tab2 = st.tabs(["🔓 Login", "📝 Register"])
-
-    # Login Tab
-    with tab1:
-        st.header("🔓 Login")
-        login_username = st.text_input("👤 Username", key="login_username")
-        login_password = st.text_input("🔒 Password", type="password", key="login_password")
-        
-        # Face verification
-        face_col1, face_col2 = st.columns([1, 1])
-        with face_col1:
-            st.markdown("📸 **Face Verification**")
-            login_face_image = st.camera_input("Take a photo for verification", key="login_face")
-        
-        with face_col2:
-            st.markdown("### Instructions")
-            st.info("""
-            1. Position your face clearly in the camera
-            2. Ensure good lighting
-            3. Remove glasses or items that obscure your face
-            4. Click the capture button to take a photo
-            """)
-        
-        if st.button("🔓 Login", use_container_width=True):
-            process_login(login_username, login_password, login_face_image)
-
-    # Registration Tab
-    with tab2:
-        st.header("📝 Register")
-        reg_username = st.text_input("👤 New Username", key="reg_username")
-        reg_password = st.text_input("🔒 New Password", type="password", key="reg_password")
-        confirm_password = st.text_input("🔑 Confirm Password", type="password", key="confirm_password")
-        
-        # Face registration
-        face_col1, face_col2 = st.columns([1, 1])
-        with face_col1:
-            st.markdown("📸 **Face Registration**")
-            reg_face_image = st.camera_input("Take a photo for registration", key="reg_face")
-        
-        with face_col2:
-            st.markdown("### Guidelines")
-            st.info("""
-            1. Position your face clearly in the camera
-            2. Ensure good lighting
-            3. Choose a neutral expression
-            4. Remember the pose/angle for future logins
-            """)
-        
-        if st.button("📝 Register", use_container_width=True):
-            process_registration(reg_username, reg_password, confirm_password, reg_face_image)
-
-def process_login(username, password, face_image):
-    """Process the login attempt with three-factor authentication"""
-    users = load_users()
-    
-    # 1. Check username
-    if not username:
-        st.error("⚠️ Please enter a username")
-        return
-    
-    if username not in users:
-        st.error("❌ User not found!")
-        return
-    
-    # 2. Check password
+# Load users
+def load_users():
     try:
-        if not password:
-            st.error("⚠️ Please enter a password")
-            return
-            
-        if not verify_password(password, bytes.fromhex(users[username]['password'])):
-            st.error("❌ Invalid password!")
-            return
-    except Exception as e:
-        st.error(f"❌ Error verifying password: {e}")
-        return
-    
-    # 3. Check face verification
-    if not face_image:
-        st.error("⚠️ Please provide a face image for verification!")
-        return
-    
+        if os.path.exists(USERS_DB):
+            with open(USERS_DB, 'r') as f:
+                return json.load(f)
+        return {}
+    except json.JSONDecodeError:
+        return {}
+
+# Save users
+def save_users(users):
+    with open(USERS_DB, 'w') as f:
+        json.dump(users, f, indent=4)
+
+# Hash Password
+def hash_password(password):
+    salt = os.urandom(16)
+    hashed = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000)
+    return salt + hashed
+
+# Verify Password
+def verify_password(password, stored_hash):
+    salt, hashed = stored_hash[:16], stored_hash[16:]
+    return hmac.compare_digest(hashed, hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000))
+
+# Face Verification using Gemini Vision
+def verify_face(image_path, stored_image_path):
+    model = get_model()
+    if model is None:
+        return False
+
     try:
-        # Save temporary image
-        image_path = os.path.join(FACE_STORAGE_DIR, f"temp_{username}.jpg")
-        with open(image_path, "wb") as f:
-            f.write(face_image.getbuffer())
+        with open(image_path, "rb") as img1, open(stored_image_path, "rb") as img2:
+            response = model.generate_content(
+                ["Compare these faces and return 'true' if they match, otherwise 'false'."],
+                [img1.read(), img2.read()]
+            )
         
-        # Add to temporary files for cleanup
-        st.session_state.temp_files.append(image_path)
-        
-        # Verify face
-        stored_face_path = users[username]['face_data']
-        
-        with st.spinner("Verifying your face..."):
-            if verify_face(image_path, stored_face_path):
-                st.session_state.authenticated = True
-                st.session_state.user_data['username'] = username
-                st.success("✅ Login successful! Redirecting to your dashboard...")
-                st.rerun()
-            else:
-                st.error("❌ Face verification failed! Please try again.")
+        return response.text.strip().lower() == 'true'
+
     except Exception as e:
         st.error(f"⚠️ Face verification error: {e}")
+        return False
 
-def process_registration(username, password, confirm_password, face_image):
-    """Process the registration with all required information"""
-    users = load_users()
-    
-    # Input validation
-    if not username:
-        st.error("⚠️ Please enter a username")
-        return
-        
-    if username in users:
-        st.error("⚠️ Username already exists!")
-        return
-    
-    if not password:
-        st.error("⚠️ Please enter a password")
-        return
-        
-    if password != confirm_password:
-        st.error("⚠️ Passwords do not match!")
-        return
-    
-    if not face_image:
-        st.error("⚠️ Please provide a face image for registration!")
-        return
-    
-    try:
-        # Hash password
-        hashed_password = hash_password(password).hex()
-        
-        # Save face image
-        face_path = os.path.join(FACE_STORAGE_DIR, f"face_{username}.jpg")
-        with open(face_path, "wb") as f:
-            f.write(face_image.getbuffer())
-        
-        # Store user data
-        users[username] = {'password': hashed_password, 'face_data': face_path}
-        save_users(users)
-        
-        st.success("✅ Registration successful! You can now log in.")
-        # Clear the form
-        st.session_state.reg_username = ""
-        st.session_state.reg_password = ""
-        st.session_state.confirm_password = ""
-        st.session_state.reg_face = None
-    except Exception as e:
-        st.error(f"⚠️ Registration error: {e}")
+# Streamlit UI
+st.title("🔑 Secure Authentication System")
 
-def display_authenticated_ui():
-    """Display the authenticated user interface"""
+if not st.session_state.authenticated:
+    tab1, tab2 = st.tabs(["🔓 Login", "📝 Register"])
+
+    # 🔑 Login Tab
+    with tab1:
+        st.header("🔑 Login")
+        username = st.text_input("👤 Username")
+        password = st.text_input("🔒 Password", type="password")
+        face_image = st.camera_input("📸 Face Verification")
+
+        if st.button("🔓 Login"):
+            users = load_users()
+            if username in users:
+                if verify_password(password, bytes.fromhex(users[username]['password'])):
+                    if face_image:
+                        image_path = f"temp_{username}.jpg"
+                        with open(image_path, "wb") as f:
+                            f.write(face_image.getbuffer())  # ✅ Fix: Save uploaded image properly
+
+                        if verify_face(image_path, users[username]['face_data']):
+                            st.session_state.authenticated = True
+                            st.session_state.user_data['username'] = username
+                            st.success("✅ Login successful!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Face verification failed!")
+                    else:
+                        st.error("⚠️ Please provide a face image for verification!")
+                else:
+                    st.error("❌ Invalid password!")
+            else:
+                st.error("❌ User not found!")
+
+    # 📝 Registration Tab
+    with tab2:
+        st.header("📝 Register")
+        new_username = st.text_input("👤 New Username")
+        new_password = st.text_input("🔒 New Password", type="password")
+        confirm_password = st.text_input("🔑 Confirm Password", type="password")
+        face_image = st.camera_input("📸 Register Face")
+
+        if st.button("📝 Register"):
+            users = load_users()
+            if new_username in users:
+                st.error("⚠️ Username already exists!")
+            elif new_password != confirm_password:
+                st.error("⚠️ Passwords do not match!")
+            elif face_image:
+                hashed_password = hash_password(new_password).hex()
+                face_path = f"face_{new_username}.jpg"
+
+                # ✅ Fix: Save the face image properly
+                with open(face_path, "wb") as f:
+                    f.write(face_image.getbuffer())
+
+                users[new_username] = {'password': hashed_password, 'face_data': face_path}
+                save_users(users)
+                st.success("✅ Registration successful! You can now log in.")
+                st.rerun()
+            else:
+                st.error("⚠️ Please provide a face image!")
+
+else:
     st.success(f"✅ Welcome, {st.session_state.user_data.get('username', 'User')}!")
-    
-    st.markdown("""
-    ## 🔐 You are securely authenticated!
-    
-    Your account is protected by three-factor authentication:
-    1. 👤 Something you know (username)
-    2. 🔑 Something you know (password)
-    3. 📸 Something you are (face verification)
-    
-    This provides much stronger security than traditional username/password authentication.
-    """)
-    
-    # Cleanup temporary files
-    if st.session_state.temp_files:
-        for file_path in st.session_state.temp_files:
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except Exception:
-                pass
-        st.session_state.temp_files = []
-    
-    # Logout button
-    if st.button("🚪 Logout", use_container_width=True):
+    if st.button("🚪 Logout"):
         st.session_state.authenticated = False
-        st.session_state.user_data = {}
         st.rerun()
-
-# Run the application
-if __name__ == "__main__":
-    main()
