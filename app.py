@@ -225,7 +225,7 @@ def verify_password(password, hash_value):
 def verify_face(image, stored_embedding):
     """Enhanced face verification using Gemini Vision API"""
     try:
-        model = genai.GenerativeModel('gemini-pro-vision')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         stored_image = Image.open(stored_embedding)
         
         # Enhanced prompt for better accuracy
