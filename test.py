@@ -6,27 +6,31 @@ import json
 import hashlib
 import hmac
 import base64
-import time
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 # Configure Gemini API
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+API_KEY = os.getenv('GEMINI_API_KEY')
+
+if not API_KEY:
+    st.error("GEMINI_API_KEY not found in environment variables!")
+else:
+    genai.configure(api_key=API_KEY)
 
 def get_model():
-    """Retrieve the generative AI model correctly."""
+    """Retrieve the Generative AI model and handle errors."""
     try:
-        return genai.GenerativeModel('gemini-1.0-pro')
-    except AttributeError:
-        st.error("Error: Google Generative AI model not found. Check the module and API key.")
+        return genai.GenerativeModel('gemini-pro-vision')  # Ensure correct model name
+    except Exception as e:
+        st.error(f"Error initializing AI model: {e}")
         return None
 
 # Streamlit Page Config
 st.set_page_config(page_title="Secure Authentication System", page_icon="🔒", layout="wide")
 
-# Initialize session state
+# Session State
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'user_data' not in st.session_state:
@@ -34,9 +38,8 @@ if 'user_data' not in st.session_state:
 
 # Constants
 USERS_DB = "users.json"
-SESSION_TIMEOUT = 1800  # 30 minutes
 
-# Function to load users
+# Load users
 def load_users():
     try:
         if os.path.exists(USERS_DB):
@@ -46,30 +49,41 @@ def load_users():
     except json.JSONDecodeError:
         return {}
 
-# Function to save users
+# Save users
 def save_users(users):
     with open(USERS_DB, 'w') as f:
         json.dump(users, f)
 
-# Secure password hashing
+# Hash Password
 def hash_password(password):
     salt = os.urandom(16)
     hashed = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000)
     return salt + hashed
 
-# Password verification
+# Verify Password
 def verify_password(password, stored_hash):
     salt, hashed = stored_hash[:16], stored_hash[16:]
     return hmac.compare_digest(hashed, hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000))
 
-# Face verification using Gemini Vision
+# Face Verification using Gemini Vision
 def verify_face(image, stored_image_path):
     model = get_model()
     if model is None:
         return False
-    stored_image = Image.open(stored_image_path)
-    response = model.generate_content(["Compare these faces and return 'true' if they match, otherwise 'false'.", image, stored_image])
-    return response.text.strip().lower() == 'true'
+
+    try:
+        stored_image = Image.open(stored_image_path)
+        response = model.generate_content(["Compare these faces and return 'true' if they match, otherwise 'false'.", image, stored_image])
+
+        # Ensure the response is properly formatted
+        if hasattr(response, 'text'):
+            return response.text.strip().lower() == 'true'
+        else:
+            return 'true' in str(response).lower()  # Fallback check
+
+    except Exception as e:
+        st.error(f"Face verification error: {e}")
+        return False
 
 # Streamlit UI
 st.title("🔒 Secure Authentication System")
