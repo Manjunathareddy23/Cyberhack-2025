@@ -2,12 +2,10 @@ streamlit==1.32.0
 google-generativeai==0.2.0
 python-dotenv==1.0.1
 Pillow==10.2.0
-
 opencv-python
 numpy
 pydub
 streamlit-webrtc
-
 smtplib
 email-validator
 
