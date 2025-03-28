@@ -75,10 +75,10 @@ tab1, tab2, tab3 = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"
 # Login
 with tab1:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)")
-    password = st.text_input("🔒 Password", type="password")
-    face_image = st.camera_input("📸 Face Verification")
-    voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"])
+    username = st.text_input("📧 Email (Username)", key="login_username")
+    password = st.text_input("🔒 Password", type="password", key="login_password")
+    face_image = st.camera_input("📸 Face Verification", key="login_face")
+    voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"], key="login_voice")
     
     if st.button("🔓 Login"):
         users = load_users()
@@ -88,7 +88,7 @@ with tab1:
                     mfa_code = generate_mfa(username)
                     send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
                     
-                    user_mfa = st.text_input("🔢 Enter MFA Code")
+                    user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
                     if st.button("✅ Verify MFA"):
                         if verify_mfa(username, user_mfa):
                             st.session_state.authenticated = True
@@ -108,11 +108,11 @@ with tab1:
 # Register
 with tab2:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)")
-    new_password = st.text_input("🔒 Password", type="password")
-    confirm_password = st.text_input("🔑 Confirm Password", type="password")
-    face_image = st.camera_input("📸 Register Face")
-    voice_recording = st.file_uploader("🎙️ Record Your Voice (Upload WAV)", type=["wav"])
+    new_username = st.text_input("📧 Email (Username)", key="register_username")
+    new_password = st.text_input("🔒 Password", type="password", key="register_password")
+    confirm_password = st.text_input("🔑 Confirm Password", type="password", key="register_confirm_password")
+    face_image = st.camera_input("📸 Register Face", key="register_face")
+    voice_recording = st.file_uploader("🎙️ Record Your Voice (Upload WAV)", type=["wav"], key="register_voice")
     
     if st.button("📝 Register"):
         users = load_users()
@@ -131,7 +131,7 @@ with tab2:
 # Reset pwd
 with tab3:
     st.header("🔑 Reset Password")
-    reset_email = st.text_input("📧 Enter your email")
+    reset_email = st.text_input("📧 Enter your email", key="reset_email")
     
     if st.button("📨 Send Reset Code"):
         users = load_users()
@@ -142,9 +142,9 @@ with tab3:
         else:
             st.error("❌ Email not registered!")
 
-    reset_code_input = st.text_input("🔢 Enter Reset Code")
-    new_reset_password = st.text_input("🔒 New Password", type="password")
-    confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password")
+    reset_code_input = st.text_input("🔢 Enter Reset Code", key="reset_code")
+    new_reset_password = st.text_input("🔒 New Password", type="password", key="new_reset_password")
+    confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password", key="confirm_reset_password")
     
     if st.button("🔄 Reset Password"):
         if verify_mfa(reset_email, reset_code_input):
