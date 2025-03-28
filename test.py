@@ -6,8 +6,11 @@ import hashlib
 import hmac
 import smtplib
 import random
+import cv2
+import numpy as np
 from email.message import EmailMessage
 from dotenv import load_dotenv
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +21,8 @@ EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
 genai.configure(api_key=API_KEY)
+
+failed_attempts = {}
 
 def send_email(to_email, subject, body):
     try:
@@ -70,6 +75,12 @@ if 'authenticated' not in st.session_state:
 if 'user_data' not in st.session_state:
     st.session_state.user_data = {}
 
+class FaceVerification(VideoTransformerBase):
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
 tab1, tab2, tab3 = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"])
 
 # Login
@@ -77,17 +88,16 @@ with tab1:
     st.header("🔑 Login")
     username = st.text_input("📧 Email (Username)", key="login_username")
     password = st.text_input("🔒 Password", type="password", key="login_password")
-    face_image = st.camera_input("📸 Face Verification", key="login_face")
-    voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"], key="login_voice")
+    webrtc_ctx = webrtc_streamer(key="face_verification", mode=WebRtcMode.SENDRECV, 
+                                 video_transformer_factory=FaceVerification)
     
     if st.button("🔓 Login"):
         users = load_users()
         if username in users:
             if verify_password(password, bytes.fromhex(users[username]['password'])):
-                if face_image and voice_recording:
+                if webrtc_ctx.video_transformer and webrtc_ctx.video_transformer.transform:
                     mfa_code = generate_mfa(username)
                     send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
-                    
                     user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
                     if st.button("✅ Verify MFA"):
                         if verify_mfa(username, user_mfa):
@@ -97,11 +107,15 @@ with tab1:
                         else:
                             st.error("❌ Incorrect MFA Code!")
                             send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
-                else:
-                    st.error("⚠️ Please provide both face and voice verification!")
             else:
-                st.error("❌ Invalid password!")
-                send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
+                failed_attempts[username] = failed_attempts.get(username, 0) + 1
+                if failed_attempts[username] >= 3:
+                    send_email(username, "⚠️ Hacking Attempt Alert!", 
+                               "\n🚨 Your account is under attack! Someone is trying to access your account with wrong passwords. \n\nClick here to reset your password immediately: [Reset Link]",
+                               )
+                    st.error("❌ Too many failed attempts! Check your email.")
+                else:
+                    st.error("❌ Invalid password!")
         else:
             st.error("❌ User not found!")
 
@@ -111,8 +125,8 @@ with tab2:
     new_username = st.text_input("📧 Email (Username)", key="register_username")
     new_password = st.text_input("🔒 Password", type="password", key="register_password")
     confirm_password = st.text_input("🔑 Confirm Password", type="password", key="register_confirm_password")
-    face_image = st.camera_input("📸 Register Face", key="register_face")
-    voice_recording = st.file_uploader("🎙️ Record Your Voice (Upload WAV)", type=["wav"], key="register_voice")
+    reg_webrtc_ctx = webrtc_streamer(key="register_face", mode=WebRtcMode.SENDRECV, 
+                                     video_transformer_factory=FaceVerification)
     
     if st.button("📝 Register"):
         users = load_users()
@@ -120,15 +134,15 @@ with tab2:
             st.error("⚠️ Email already registered!")
         elif new_password != confirm_password:
             st.error("⚠️ Passwords do not match!")
-        elif face_image and voice_recording:
+        elif reg_webrtc_ctx.video_transformer:
             hashed_password = hash_password(new_password).hex()
-            users[new_username] = {'password': hashed_password, 'face_data': "face.jpg", 'voice_data': "voice.wav"}
+            users[new_username] = {'password': hashed_password}
             save_users(users)
             st.success("✅ Registration successful! Please log in.")
         else:
-            st.error("⚠️ Please provide both face and voice data!")
+            st.error("⚠️ Please provide face verification!")
 
-# Reset pwd
+# Reset Password
 with tab3:
     st.header("🔑 Reset Password")
     reset_email = st.text_input("📧 Enter your email", key="reset_email")
@@ -137,7 +151,7 @@ with tab3:
         users = load_users()
         if reset_email in users:
             reset_code = generate_mfa(reset_email)
-            send_email(reset_email, "Reset Your Password", f"Your reset code is {reset_code}")
+            send_email(reset_email, "Reset Your Password", f"Your reset code is {reset_code}\nClick here to reset: [Reset Link]")
             st.success("📩 Reset code sent to your email!")
         else:
             st.error("❌ Email not registered!")
