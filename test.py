@@ -128,7 +128,7 @@ with tab2:
         else:
             st.error("⚠️ Please provide both face and voice data!")
 
-# Reset Password
+# Reset pwd
 with tab3:
     st.header("🔑 Reset Password")
     reset_email = st.text_input("📧 Enter your email")
