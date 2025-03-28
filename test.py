@@ -22,7 +22,7 @@ else:
 def get_model():
     """Retrieve the Generative AI model and handle errors."""
     try:
-        return genai.GenerativeModel('gemini-pro-vision')  # Ensure correct model name
+        return genai.GenerativeModel('gemini-1.5-flash')  # Ensure correct model name
     except Exception as e:
         st.error(f"Error initializing AI model: {e}")
         return None
