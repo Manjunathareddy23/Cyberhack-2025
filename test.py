@@ -26,7 +26,7 @@ def set_background():
         f"""
         <style>
         .stApp {{
-            background-image: url('{background_url}');
+            background-image: url('https://raw.githubusercontent.com/Manjunathareddy23/Cyberhack-2025/main/back.jpg');
             background-size: cover;
         }}
         </style>
