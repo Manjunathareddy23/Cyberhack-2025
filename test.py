@@ -110,7 +110,7 @@ login_tab, register_tab, reset_tab = st.tabs(["🔓 Login", "📝 Register", "�
 # LOGIN
 with login_tab:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)")
+    username = st.text_input("📧 Email (Username)", key="login_username")
     password = st.text_input("🔒 Password", type="password")
     face_image = st.camera_input("📸 Face Verification")
     voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"])
@@ -139,7 +139,7 @@ with login_tab:
 # REGISTER
 with register_tab:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)")
+    new_username = st.text_input("📧 Email (Username)", key="register_username")
     new_password = st.text_input("🔒 Password", type="password")
     confirm_password = st.text_input("🔑 Confirm Password", type="password")
     face_image = st.camera_input("📸 Register Face")
@@ -161,7 +161,7 @@ with register_tab:
 # RESET PASSWORD
 with reset_tab:
     st.header("🔑 Reset Password")
-    reset_email = st.text_input("📧 Enter your email")
+    reset_email = st.text_input("📧 Enter your email", key="reset_email")
     
     if st.button("📨 Send Reset Code"):
         users = load_users()
