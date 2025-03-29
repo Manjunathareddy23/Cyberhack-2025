@@ -21,7 +21,7 @@ genai.configure(api_key=API_KEY)
 
 # Function to set background
 def set_background():
-    background_url =   # Replace with your actual GitHub raw URL
+
     st.markdown(
         f"""
         <style>
