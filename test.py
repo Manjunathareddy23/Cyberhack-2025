@@ -146,7 +146,7 @@ with reset_tab:
 
 # Set background
 def set_background():
-    github_image_url = "https://raw.githubusercontent.com/your-username/your-repo/main/back.jpg"
+    github_image_url = "https://raw.githubusercontent.com/Manjunathareddy23/Cyberhack/main/back.jpg"
     
     st.markdown(
         f"""
