@@ -9,32 +9,13 @@ import random
 from email.message import EmailMessage
 from dotenv import load_dotenv
 
-# Ensure required packages are available
-missing_modules = []
-try:
-    import numpy as np
-    import cv2
-    import streamlit_webrtc
-    from email_validator import validate_email, EmailNotValidError
-except ModuleNotFoundError as e:
-    missing_modules.append(e.name)
-
-if missing_modules:
-    st.error(f"Missing modules: {', '.join(missing_modules)}. Please install them using pip.")
-
 # Load environment variables
 load_dotenv()
+
 API_KEY = os.getenv('GEMINI_API_KEY')
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
-# Validate API key and email credentials
-if not API_KEY:
-    st.error("❌ Missing GEMINI_API_KEY in .env file.")
-if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
-    st.error("❌ Missing email credentials in .env file.")
-
-# Configure Generative AI
 genai.configure(api_key=API_KEY)
 
 # Function to send email
@@ -45,6 +26,7 @@ def send_email(to_email, subject, body):
         msg['To'] = to_email
         msg['Subject'] = subject
         msg.set_content(body)
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
             server.send_message(msg)
@@ -86,18 +68,18 @@ def verify_password(password, stored_hash):
     salt, hashed = stored_hash[:16], stored_hash[16:]
     return hmac.compare_digest(hashed, hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000))
 
-# Streamlit UI
 st.title("🔑 Secure Authentication System")
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
-tab1, tab2, tab3 = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"])
+# Tabs for authentication
+login_tab, register_tab, reset_tab = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"])
 
 # LOGIN
-with tab1:
+with login_tab:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)", key="login_email")
+    username = st.text_input("📧 Email (Username)", key="login_username")
     password = st.text_input("🔒 Password", type="password", key="login_password")
     
     if st.button("🔓 Login"):
@@ -119,9 +101,9 @@ with tab1:
                 st.error("❌ Incorrect MFA Code!")
 
 # REGISTER
-with tab2:
+with register_tab:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)", key="register_email")
+    new_username = st.text_input("📧 Email (Username)", key="register_username")
     new_password = st.text_input("🔒 Password", type="password", key="register_password")
     confirm_password = st.text_input("🔑 Confirm Password", type="password", key="confirm_register_password")
 
@@ -137,7 +119,7 @@ with tab2:
             st.success("✅ Registration successful! Please log in.")
 
 # RESET PASSWORD
-with tab3:
+with reset_tab:
     st.header("🔑 Reset Password")
     reset_email = st.text_input("📧 Enter your email", key="reset_email")
 
