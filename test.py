@@ -16,9 +16,23 @@ API_KEY = os.getenv('GEMINI_API_KEY')
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
+# Ensure API key is configured
 genai.configure(api_key=API_KEY)
 
-# Send email
+# Check and install missing dependencies
+try:
+    import imageio
+    import imagehash
+    import moviepy
+    import numpy as np
+    import opencv_python_headless
+    import pydub
+    import streamlit_webrtc
+    import email_validator
+except ModuleNotFoundError as e:
+    st.error(f"Missing module: {e.name}. Please install it using pip.")
+
+# Function to send email
 def send_email(to_email, subject, body):
     try:
         msg = EmailMessage()
@@ -44,6 +58,7 @@ def generate_mfa(username):
 def verify_mfa(username, code):
     return st.session_state.mfa_codes.get(username) == code
 
+# User Management
 def load_users():
     try:
         with open("users.json", "r") as f:
