@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Configure API and Email
 API_KEY = os.getenv('GEMINI_API_KEY')
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
@@ -73,7 +74,6 @@ st.title("🔑 Secure Authentication System")
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
-# Tabs for authentication
 login_tab, register_tab, reset_tab = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"])
 
 # LOGIN
@@ -81,22 +81,27 @@ with login_tab:
     st.header("🔑 Login")
     username = st.text_input("📧 Email (Username)", key="login_username")
     password = st.text_input("🔒 Password", type="password", key="login_password")
+    face_image = st.camera_input("📸 Face Verification", key="login_face")
+    voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"], key="login_voice")
     
     if st.button("🔓 Login"):
         users = load_users()
         if username in users and verify_password(password, users[username]['password']):
-            mfa_code = generate_mfa(username)
-            send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
-            st.session_state.pending_mfa_user = username  # Store pending MFA user
-            st.success("✅ MFA Code Sent! Please enter below.")
-
+            if face_image and voice_recording:
+                mfa_code = generate_mfa(username)
+                send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
+                st.session_state.pending_mfa_user = username
+                st.success("✅ MFA Code Sent! Please enter below.")
+        else:
+            st.error("❌ Invalid email or password!")
+    
     if 'pending_mfa_user' in st.session_state:
         user_mfa = st.text_input("🔢 Enter MFA Code", key="mfa_code")
         if st.button("✅ Verify MFA"):
             if verify_mfa(st.session_state.pending_mfa_user, user_mfa):
                 st.session_state.authenticated = True
                 st.success("✅ Login successful!")
-                del st.session_state.pending_mfa_user  # Clear after success
+                del st.session_state.pending_mfa_user
             else:
                 st.error("❌ Incorrect MFA Code!")
 
@@ -106,29 +111,33 @@ with register_tab:
     new_username = st.text_input("📧 Email (Username)", key="register_username")
     new_password = st.text_input("🔒 Password", type="password", key="register_password")
     confirm_password = st.text_input("🔑 Confirm Password", type="password", key="confirm_register_password")
-
+    face_image = st.camera_input("📸 Register Face", key="register_face")
+    voice_recording = st.file_uploader("🎙️ Record Your Voice (Upload WAV)", type=["wav"], key="register_voice")
+    
     if st.button("📝 Register"):
         users = load_users()
         if new_username in users:
             st.error("⚠️ Email already registered!")
         elif new_password != confirm_password:
             st.error("⚠️ Passwords do not match!")
-        else:
+        elif face_image and voice_recording:
             users[new_username] = {'password': hash_password(new_password)}
             save_users(users)
             st.success("✅ Registration successful! Please log in.")
+        else:
+            st.error("⚠️ Please provide both face and voice data!")
 
 # RESET PASSWORD
 with reset_tab:
     st.header("🔑 Reset Password")
     reset_email = st.text_input("📧 Enter your email", key="reset_email")
-
+    
     if st.button("📨 Send Reset Code"):
         users = load_users()
         if reset_email in users:
             reset_code = generate_mfa(reset_email)
             send_email(reset_email, "Reset Your Password", f"Your reset code is {reset_code}")
-            st.session_state.pending_reset_user = reset_email  # Store user for reset
+            st.session_state.pending_reset_user = reset_email
             st.success("📩 Reset code sent to your email!")
         else:
             st.error("❌ Email not registered!")
@@ -137,13 +146,13 @@ with reset_tab:
         reset_code_input = st.text_input("🔢 Enter Reset Code", key="reset_code")
         new_reset_password = st.text_input("🔒 New Password", type="password", key="new_reset_password")
         confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password", key="confirm_new_reset_password")
-
+        
         if st.button("🔄 Reset Password"):
             if verify_mfa(st.session_state.pending_reset_user, reset_code_input):
                 if new_reset_password == confirm_reset_password:
                     users[st.session_state.pending_reset_user]['password'] = hash_password(new_reset_password)
                     save_users(users)
-                    del st.session_state.pending_reset_user  # Clear session state
+                    del st.session_state.pending_reset_user
                     st.success("✅ Password successfully reset! Please log in.")
                 else:
                     st.error("⚠️ Passwords do not match!")
