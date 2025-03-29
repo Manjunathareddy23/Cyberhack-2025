@@ -39,6 +39,9 @@ def send_email(to_email, subject, body):
 if 'mfa_codes' not in st.session_state:
     st.session_state.mfa_codes = {}
 
+if 'login_attempts' not in st.session_state:
+    st.session_state.login_attempts = {}
+
 def generate_mfa(username):
     code = str(random.randint(100000, 999999))
     st.session_state.mfa_codes[username] = code
@@ -89,12 +92,16 @@ with login_tab:
     if st.button("🔓 Login"):
         users = load_users()
         if username in users and verify_password(password, users[username]['password']):
+            st.session_state.login_attempts[username] = 0
             if face_image and voice_recording:
                 mfa_code = generate_mfa(username)
                 send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
                 st.session_state.pending_mfa_user = username
                 st.success("✅ MFA Code Sent! Please enter below.")
         else:
+            st.session_state.login_attempts[username] = st.session_state.login_attempts.get(username, 0) + 1
+            if st.session_state.login_attempts[username] >= 2:
+                send_email(username, "Security Alert!", "Someone is trying to access your account with incorrect credentials.")
             st.error("❌ Invalid email or password!")
     
     if 'pending_mfa_user' in st.session_state:
