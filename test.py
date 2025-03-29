@@ -6,8 +6,12 @@ import hashlib
 import hmac
 import smtplib
 import random
+import numpy as np
 from email.message import EmailMessage
 from dotenv import load_dotenv
+from PIL import Image
+import imagehash
+from pydub import AudioSegment
 
 # Load environment variables
 load_dotenv()
@@ -19,7 +23,7 @@ EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
 genai.configure(api_key=API_KEY)
 
-# Directory to store user face and voice data
+# Directory for storing face and voice data
 DATA_DIR = "user_data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -37,7 +41,7 @@ def send_email(to_email, subject, body):
     except Exception as e:
         st.error(f"Email sending failed: {e}")
 
-# MFA Generation
+# MFA Code Management
 mfa_codes = {}
 def generate_mfa(username):
     code = str(random.randint(100000, 999999))
@@ -68,6 +72,17 @@ def verify_password(password, stored_hash):
     salt, hashed = stored_hash[:16], stored_hash[16:]
     return hmac.compare_digest(hashed, hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000))
 
+def compute_image_hash(image):
+    """Computes perceptual hash of the image."""
+    img = Image.open(image)
+    return str(imagehash.average_hash(img))
+
+def compute_audio_fingerprint(audio):
+    """Generates a basic audio fingerprint using raw audio data."""
+    sound = AudioSegment.from_file(audio)
+    samples = np.array(sound.get_array_of_samples())
+    return hashlib.md5(samples.tobytes()).hexdigest()
+
 st.title("🔑 Secure Authentication System")
 
 if 'authenticated' not in st.session_state:
@@ -95,25 +110,26 @@ with tab1:
                 if not os.path.exists(face_path) or not os.path.exists(voice_path):
                     st.error("⚠️ Face or voice data missing. Please re-register.")
                 elif face_image and voice_recording:
-                    with open(face_path, "wb") as f:
-                        f.write(face_image.read())
-                    with open(voice_path, "wb") as f:
-                        f.write(voice_recording.read())
-                    
-                    mfa_code = generate_mfa(username)
-                    send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
-                    user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
+                    uploaded_face_hash = compute_image_hash(face_image)
+                    stored_face_hash = users[username].get('face_hash')
 
-                    if st.button("✅ Verify MFA"):
-                        if verify_mfa(username, user_mfa):
-                            st.session_state.authenticated = True
-                            st.session_state.user_data['username'] = username
-                            st.success("✅ Login successful!")
-                        else:
-                            st.error("❌ Incorrect MFA Code!")
-                            send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
-                else:
-                    st.error("⚠️ Please provide both face and voice verification!")
+                    uploaded_voice_fingerprint = compute_audio_fingerprint(voice_recording)
+                    stored_voice_fingerprint = users[username].get('voice_fingerprint')
+
+                    if uploaded_face_hash == stored_face_hash and uploaded_voice_fingerprint == stored_voice_fingerprint:
+                        mfa_code = generate_mfa(username)
+                        send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
+                        user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
+
+                        if st.button("✅ Verify MFA"):
+                            if verify_mfa(username, user_mfa):
+                                st.session_state.authenticated = True
+                                st.session_state.user_data['username'] = username
+                                st.success("✅ Login successful!")
+                            else:
+                                st.error("❌ Incorrect MFA Code!")
+                    else:
+                        st.error("❌ Face or voice verification failed!")
             else:
                 st.error("❌ Invalid password!")
         else:
@@ -137,13 +153,18 @@ with tab2:
         elif face_image and voice_recording:
             face_path = os.path.join(DATA_DIR, f"{new_username}_face.jpg")
             voice_path = os.path.join(DATA_DIR, f"{new_username}_voice.wav")
+
             with open(face_path, "wb") as f:
                 f.write(face_image.read())
             with open(voice_path, "wb") as f:
                 f.write(voice_recording.read())
-            
+
             hashed_password = hash_password(new_password)
-            users[new_username] = {'password': hashed_password}
+            users[new_username] = {
+                'password': hashed_password,
+                'face_hash': compute_image_hash(face_path),
+                'voice_fingerprint': compute_audio_fingerprint(voice_path)
+            }
             save_users(users)
             st.success("✅ Registration successful! Please log in.")
         else:
