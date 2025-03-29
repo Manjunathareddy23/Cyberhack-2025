@@ -20,6 +20,7 @@ EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 # Initialize Google Gemini API
 genai.configure(api_key=API_KEY)
 
+
 # Function to send email
 def send_email(to_email, subject, body):
     try:
@@ -143,3 +144,41 @@ with reset_tab:
             st.success("📩 Reset code sent to your email!")
         else:
             st.error("❌ Email not registered!")
+
+
+
+def set_background():
+    github_image_url = "https://raw.githubusercontent.com/your-username/your-repo/main/back.jpg"
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("{github_image_url}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        .stTextInput, .stTextArea, .stFileUploader, .stButton > button {{
+            border-radius: 10px;
+            padding: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+        }}
+        .stButton > button:hover {{
+            background: rgba(255, 255, 255, 0.3);
+            transition: 0.3s;
+        }}
+        .stTabs {{
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+set_background()
