@@ -20,7 +20,6 @@ EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 # Initialize Google Gemini API
 genai.configure(api_key=API_KEY)
 
-
 # Function to send email
 def send_email(to_email, subject, body):
     try:
@@ -82,7 +81,7 @@ login_tab, register_tab, reset_tab = st.tabs(["🔓 Login", "📝 Register", "�
 # LOGIN
 with login_tab:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)", key="login_email")  # Unique key
+    username = st.text_input("📧 Email (Username)", key="login_email")
     password = st.text_input("🔒 Password", type="password", key="login_password")
     face_image = st.camera_input("📸 Face Verification")
     voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"])
@@ -111,7 +110,7 @@ with login_tab:
 # REGISTER
 with register_tab:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)", key="register_email")  # Unique key
+    new_username = st.text_input("📧 Email (Username)", key="register_email")
     new_password = st.text_input("🔒 Password", type="password", key="register_password")
     confirm_password = st.text_input("🔑 Confirm Password", type="password", key="register_confirm_password")
     face_image = st.camera_input("📸 Register Face")
@@ -145,11 +144,10 @@ with reset_tab:
         else:
             st.error("❌ Email not registered!")
 
-
-
+# Set background
 def set_background():
     github_image_url = "https://raw.githubusercontent.com/your-username/your-repo/main/back.jpg"
-
+    
     st.markdown(
         f"""
         <style>
@@ -159,22 +157,6 @@ def set_background():
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-        }}
-        .stTextInput, .stTextArea, .stFileUploader, .stButton > button {{
-            border-radius: 10px;
-            padding: 10px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-        }}
-        .stButton > button:hover {{
-            background: rgba(255, 255, 255, 0.3);
-            transition: 0.3s;
-        }}
-        .stTabs {{
-            font-weight: bold;
-            font-size: 18px;
-            color: white;
         }}
         </style>
         """,
