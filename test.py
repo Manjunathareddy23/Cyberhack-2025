@@ -29,7 +29,6 @@ EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 genai.configure(api_key=API_KEY)
 
 # Send email
-
 def send_email(to_email, subject, body):
     try:
         msg = EmailMessage()
@@ -88,14 +87,14 @@ tab1, tab2, tab3 = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"
 # LOGIN
 with tab1:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)")
-    password = st.text_input("🔒 Password", type="password")
+    username = st.text_input("📧 Email (Username)", key="login_email")
+    password = st.text_input("🔒 Password", type="password", key="login_password")
     if st.button("🔓 Login"):
         users = load_users()
         if username in users and verify_password(password, users[username]['password']):
             mfa_code = generate_mfa(username)
             send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
-            user_mfa = st.text_input("🔢 Enter MFA Code")
+            user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
             if st.button("✅ Verify MFA"):
                 if verify_mfa(username, user_mfa):
                     st.session_state.authenticated = True
@@ -108,9 +107,9 @@ with tab1:
 # REGISTER
 with tab2:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)")
-    new_password = st.text_input("🔒 Password", type="password")
-    confirm_password = st.text_input("🔑 Confirm Password", type="password")
+    new_username = st.text_input("📧 Email (Username)", key="register_email")
+    new_password = st.text_input("🔒 Password", type="password", key="register_password")
+    confirm_password = st.text_input("🔑 Confirm Password", type="password", key="register_confirm_password")
     if st.button("📝 Register"):
         users = load_users()
         if new_username in users:
@@ -125,7 +124,7 @@ with tab2:
 # RESET PASSWORD
 with tab3:
     st.header("🔑 Reset Password")
-    reset_email = st.text_input("📧 Enter your email")
+    reset_email = st.text_input("📧 Enter your email", key="reset_email")
     if st.button("📨 Send Reset Code"):
         users = load_users()
         if reset_email in users:
@@ -135,9 +134,9 @@ with tab3:
         else:
             st.error("❌ Email not registered!")
     
-    reset_code_input = st.text_input("🔢 Enter Reset Code")
-    new_reset_password = st.text_input("🔒 New Password", type="password")
-    confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password")
+    reset_code_input = st.text_input("🔢 Enter Reset Code", key="reset_code")
+    new_reset_password = st.text_input("🔒 New Password", type="password", key="new_reset_password")
+    confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password", key="confirm_reset_password")
     
     if st.button("🔄 Reset Password"):
         if verify_mfa(reset_email, reset_code_input):
