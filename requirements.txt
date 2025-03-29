@@ -12,12 +12,5 @@ moviepy
 imageio 
 imageio[ffmpeg]
 
-streamlit
-moviepy
-imageio
-numpy
-opencv-python-headless
-pydub
-streamlit-webrtc
-email-validator
-python-dotenv
+
+
