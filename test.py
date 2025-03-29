@@ -19,6 +19,10 @@ EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
 genai.configure(api_key=API_KEY)
 
+# Directory to store user face and voice data
+DATA_DIR = "user_data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
 def send_email(to_email, subject, body):
     try:
         msg = EmailMessage()
@@ -57,9 +61,10 @@ def save_users(users):
 def hash_password(password):
     salt = os.urandom(16)
     hashed = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000)
-    return salt + hashed
+    return (salt + hashed).hex()
 
 def verify_password(password, stored_hash):
+    stored_hash = bytes.fromhex(stored_hash)
     salt, hashed = stored_hash[:16], stored_hash[16:]
     return hmac.compare_digest(hashed, hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000))
 
@@ -83,16 +88,18 @@ with tab1:
     if st.button("🔓 Login"):
         users = load_users()
         if username in users:
-            if verify_password(password, bytes.fromhex(users[username]['password'])):
-                # Validate face and voice
-                stored_face = users[username].get('face_data')
-                stored_voice = users[username].get('voice_data')
+            if verify_password(password, users[username]['password']):
+                face_path = os.path.join(DATA_DIR, f"{username}_face.jpg")
+                voice_path = os.path.join(DATA_DIR, f"{username}_voice.wav")
                 
-                if not face_image or not voice_recording:
-                    st.error("⚠️ Please provide both face and voice verification!")
-                elif stored_face != "face.jpg" or stored_voice != "voice.wav":
-                    st.error("❌ Face or voice verification failed!")
-                else:
+                if not os.path.exists(face_path) or not os.path.exists(voice_path):
+                    st.error("⚠️ Face or voice data missing. Please re-register.")
+                elif face_image and voice_recording:
+                    with open(face_path, "wb") as f:
+                        f.write(face_image.read())
+                    with open(voice_path, "wb") as f:
+                        f.write(voice_recording.read())
+                    
                     mfa_code = generate_mfa(username)
                     send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
                     user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
@@ -105,9 +112,10 @@ with tab1:
                         else:
                             st.error("❌ Incorrect MFA Code!")
                             send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
+                else:
+                    st.error("⚠️ Please provide both face and voice verification!")
             else:
                 st.error("❌ Invalid password!")
-                send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
         else:
             st.error("❌ User not found!")
 
@@ -127,38 +135,16 @@ with tab2:
         elif new_password != confirm_password:
             st.error("⚠️ Passwords do not match!")
         elif face_image and voice_recording:
-            hashed_password = hash_password(new_password).hex()
-            users[new_username] = {'password': hashed_password, 'face_data': "face.jpg", 'voice_data': "voice.wav"}
+            face_path = os.path.join(DATA_DIR, f"{new_username}_face.jpg")
+            voice_path = os.path.join(DATA_DIR, f"{new_username}_voice.wav")
+            with open(face_path, "wb") as f:
+                f.write(face_image.read())
+            with open(voice_path, "wb") as f:
+                f.write(voice_recording.read())
+            
+            hashed_password = hash_password(new_password)
+            users[new_username] = {'password': hashed_password}
             save_users(users)
             st.success("✅ Registration successful! Please log in.")
         else:
             st.error("⚠️ Please provide both face and voice data!")
-
-# Reset Password
-with tab3:
-    st.header("🔑 Reset Password")
-    reset_email = st.text_input("📧 Enter your email", key="reset_email")
-    
-    if st.button("📨 Send Reset Code"):
-        users = load_users()
-        if reset_email in users:
-            reset_code = generate_mfa(reset_email)
-            send_email(reset_email, "Reset Your Password", f"Your reset code is {reset_code}")
-            st.success("📩 Reset code sent to your email!")
-        else:
-            st.error("❌ Email not registered!")
-
-    reset_code_input = st.text_input("🔢 Enter Reset Code", key="reset_code")
-    new_reset_password = st.text_input("🔒 New Password", type="password", key="new_reset_password")
-    confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password", key="confirm_reset_password")
-    
-    if st.button("🔄 Reset Password"):
-        if verify_mfa(reset_email, reset_code_input):
-            if new_reset_password == confirm_reset_password:
-                users[reset_email]['password'] = hash_password(new_reset_password).hex()
-                save_users(users)
-                st.success("✅ Password successfully reset! Please log in.")
-            else:
-                st.error("⚠️ Passwords do not match!")
-        else:
-            st.error("❌ Invalid reset code!")
