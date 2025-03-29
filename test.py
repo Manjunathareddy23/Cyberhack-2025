@@ -1,6 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-import os
+import os  
 import json
 import hashlib
 import hmac
@@ -18,6 +18,23 @@ EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
 genai.configure(api_key=API_KEY)
+
+# Function to set background
+def set_background():
+    background_url =   # Replace with your actual GitHub raw URL
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url('{background_url}');
+            background-size: cover;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+set_background()
 
 # Function to send email
 def send_email(to_email, subject, body):
@@ -141,20 +158,3 @@ with reset_tab:
             st.success("📩 Reset code sent to your email!")
         else:
             st.error("❌ Email not registered!")
-
-    if 'pending_reset_user' in st.session_state:
-        reset_code_input = st.text_input("🔢 Enter Reset Code", key="reset_code")
-        new_reset_password = st.text_input("🔒 New Password", type="password", key="new_reset_password")
-        confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password", key="confirm_new_reset_password")
-        
-        if st.button("🔄 Reset Password"):
-            if verify_mfa(st.session_state.pending_reset_user, reset_code_input):
-                if new_reset_password == confirm_reset_password:
-                    users[st.session_state.pending_reset_user]['password'] = hash_password(new_reset_password)
-                    save_users(users)
-                    del st.session_state.pending_reset_user
-                    st.success("✅ Password successfully reset! Please log in.")
-                else:
-                    st.error("⚠️ Passwords do not match!")
-            else:
-                st.error("❌ Invalid reset code!")
