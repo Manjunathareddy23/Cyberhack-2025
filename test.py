@@ -9,16 +9,7 @@ import random
 import subprocess
 from email.message import EmailMessage
 from dotenv import load_dotenv
-from pydub import AudioSegment
-
-# Check and install FFmpeg if missing
-def check_ffmpeg():
-    try:
-        subprocess.run(["ffmpeg", "-version"], check=True, capture_output=True)
-    except FileNotFoundError:
-        st.error("FFmpeg is missing! Install it using: sudo apt install ffmpeg")
-
-check_ffmpeg()
+from moviepy.editor import AudioFileClip  # Replacing FFmpeg with MoviePy
 
 # Load environment variables
 load_dotenv()
