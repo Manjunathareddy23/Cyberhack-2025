@@ -10,17 +10,19 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 
 # Ensure required packages are available
+missing_modules = []
 try:
     from moviepy.editor import AudioFileClip  # Ensure moviepy is installed
-    import imageio
     import imagehash
     import numpy as np
     import cv2
-    import pydub
     import streamlit_webrtc
-    import email_validator
+    from email_validator import validate_email, EmailNotValidError
 except ModuleNotFoundError as e:
-    st.error(f"Missing module: {e.name}. Please install it using pip.")
+    missing_modules.append(e.name)
+
+if missing_modules:
+    st.error(f"Missing modules: {', '.join(missing_modules)}. Please install them using pip.")
 
 # Load environment variables
 load_dotenv()
@@ -97,8 +99,9 @@ tab1, tab2, tab3 = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"
 # LOGIN
 with tab1:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)")
-    password = st.text_input("🔒 Password", type="password")
+    username = st.text_input("📧 Email (Username)", key="login_email")
+    password = st.text_input("🔒 Password", type="password", key="login_password")
+    
     if st.button("🔓 Login"):
         users = load_users()
         if username in users and verify_password(password, users[username]['password']):
@@ -106,9 +109,9 @@ with tab1:
             send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
             st.session_state.pending_mfa_user = username  # Store pending MFA user
             st.success("✅ MFA Code Sent! Please enter below.")
-    
+
     if 'pending_mfa_user' in st.session_state:
-        user_mfa = st.text_input("🔢 Enter MFA Code")
+        user_mfa = st.text_input("🔢 Enter MFA Code", key="mfa_code")
         if st.button("✅ Verify MFA"):
             if verify_mfa(st.session_state.pending_mfa_user, user_mfa):
                 st.session_state.authenticated = True
@@ -120,9 +123,10 @@ with tab1:
 # REGISTER
 with tab2:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)")
-    new_password = st.text_input("🔒 Password", type="password")
-    confirm_password = st.text_input("🔑 Confirm Password", type="password")
+    new_username = st.text_input("📧 Email (Username)", key="register_email")
+    new_password = st.text_input("🔒 Password", type="password", key="register_password")
+    confirm_password = st.text_input("🔑 Confirm Password", type="password", key="confirm_register_password")
+
     if st.button("📝 Register"):
         users = load_users()
         if new_username in users:
@@ -137,7 +141,8 @@ with tab2:
 # RESET PASSWORD
 with tab3:
     st.header("🔑 Reset Password")
-    reset_email = st.text_input("📧 Enter your email")
+    reset_email = st.text_input("📧 Enter your email", key="reset_email")
+
     if st.button("📨 Send Reset Code"):
         users = load_users()
         if reset_email in users:
@@ -147,11 +152,12 @@ with tab3:
             st.success("📩 Reset code sent to your email!")
         else:
             st.error("❌ Email not registered!")
-    
+
     if 'pending_reset_user' in st.session_state:
-        reset_code_input = st.text_input("🔢 Enter Reset Code")
-        new_reset_password = st.text_input("🔒 New Password", type="password")
-        confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password")
+        reset_code_input = st.text_input("🔢 Enter Reset Code", key="reset_code")
+        new_reset_password = st.text_input("🔒 New Password", type="password", key="new_reset_password")
+        confirm_reset_password = st.text_input("🔑 Confirm New Password", type="password", key="confirm_new_reset_password")
+
         if st.button("🔄 Reset Password"):
             if verify_mfa(st.session_state.pending_reset_user, reset_code_input):
                 if new_reset_password == confirm_reset_password:
