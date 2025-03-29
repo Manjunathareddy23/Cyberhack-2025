@@ -12,8 +12,6 @@ from dotenv import load_dotenv
 # Ensure required packages are available
 missing_modules = []
 try:
-    from moviepy.editor import AudioFileClip  # Ensure moviepy is installed
-    import imagehash
     import numpy as np
     import cv2
     import streamlit_webrtc
