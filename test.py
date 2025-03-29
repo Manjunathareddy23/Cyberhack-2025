@@ -84,10 +84,19 @@ with tab1:
         users = load_users()
         if username in users:
             if verify_password(password, bytes.fromhex(users[username]['password'])):
-                if face_image and voice_recording:
+                # Validate face and voice
+                stored_face = users[username].get('face_data')
+                stored_voice = users[username].get('voice_data')
+                
+                if not face_image or not voice_recording:
+                    st.error("⚠️ Please provide both face and voice verification!")
+                elif stored_face != "face.jpg" or stored_voice != "voice.wav":
+                    st.error("❌ Face or voice verification failed!")
+                else:
                     mfa_code = generate_mfa(username)
                     send_email(username, "Your MFA Code", f"Your MFA code is {mfa_code}")
                     user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa")
+
                     if st.button("✅ Verify MFA"):
                         if verify_mfa(username, user_mfa):
                             st.session_state.authenticated = True
@@ -96,8 +105,6 @@ with tab1:
                         else:
                             st.error("❌ Incorrect MFA Code!")
                             send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
-                else:
-                    st.error("⚠️ Please provide both face and voice verification!")
             else:
                 st.error("❌ Invalid password!")
                 send_email(username, "Unauthorized Login Attempt", "There was an unsuccessful login attempt.")
