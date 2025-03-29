@@ -8,7 +8,19 @@ import smtplib
 import random
 from email.message import EmailMessage
 from dotenv import load_dotenv
-from moviepy.editor import AudioFileClip  # Ensure moviepy is installed
+
+# Ensure required packages are available
+try:
+    from moviepy.editor import AudioFileClip  # Ensure moviepy is installed
+    import imageio
+    import imagehash
+    import numpy as np
+    import cv2
+    import pydub
+    import streamlit_webrtc
+    import email_validator
+except ModuleNotFoundError as e:
+    st.error(f"Missing module: {e.name}. Please install it using pip.")
 
 # Load environment variables
 load_dotenv()
@@ -16,21 +28,14 @@ API_KEY = os.getenv('GEMINI_API_KEY')
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
-# Ensure API key is configured
-genai.configure(api_key=API_KEY)
+# Validate API key and email credentials
+if not API_KEY:
+    st.error("❌ Missing GEMINI_API_KEY in .env file.")
+if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
+    st.error("❌ Missing email credentials in .env file.")
 
-# Check and install missing dependencies
-try:
-    import imageio
-    import imagehash
-    import moviepy
-    import numpy as np
-    import opencv_python_headless
-    import pydub
-    import streamlit_webrtc
-    import email_validator
-except ModuleNotFoundError as e:
-    st.error(f"Missing module: {e.name}. Please install it using pip.")
+# Configure Generative AI
+genai.configure(api_key=API_KEY)
 
 # Function to send email
 def send_email(to_email, subject, body):
@@ -63,7 +68,7 @@ def load_users():
     try:
         with open("users.json", "r") as f:
             return json.load(f)
-    except:
+    except FileNotFoundError:
         return {}
 
 def save_users(users):
@@ -81,6 +86,7 @@ def verify_password(password, stored_hash):
     salt, hashed = stored_hash[:16], stored_hash[16:]
     return hmac.compare_digest(hashed, hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 150000))
 
+# Streamlit UI
 st.title("🔑 Secure Authentication System")
 
 if 'authenticated' not in st.session_state:
