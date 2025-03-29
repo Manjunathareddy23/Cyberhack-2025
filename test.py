@@ -74,35 +74,6 @@ def verify_password(password, stored_hash):
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
-# Apply custom CSS
-st.markdown("""
-    <style>
-        .stApp {
-            background-color: #121212;
-        }
-        h1, h2, h3 {
-            color: gold;
-            text-align: center;
-        }
-        label {
-            color: white;
-            font-size: 18px;
-        }
-        input, button, select {
-            background-color: #222;
-            color: white;
-            border-radius: 10px;
-            padding: 10px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-        button:hover {
-            background: gold;
-            color: black;
-            transition: 0.3s;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("🔑 Secure Authentication System")
 
 login_tab, register_tab, reset_tab = st.tabs(["🔓 Login", "📝 Register", "🔑 Reset Password"])
@@ -110,8 +81,8 @@ login_tab, register_tab, reset_tab = st.tabs(["🔓 Login", "📝 Register", "�
 # LOGIN
 with login_tab:
     st.header("🔑 Login")
-    username = st.text_input("📧 Email (Username)", key="login_username")
-    password = st.text_input("🔒 Password", type="password")
+    username = st.text_input("📧 Email (Username)", key="login_email")
+    password = st.text_input("🔒 Password", type="password", key="login_password")
     face_image = st.camera_input("📸 Face Verification")
     voice_recording = st.file_uploader("🎙️ Voice Verification (Upload WAV)", type=["wav"])
     
@@ -127,7 +98,7 @@ with login_tab:
             st.error("❌ Invalid email or password!")
     
     if 'pending_mfa_user' in st.session_state:
-        user_mfa = st.text_input("🔢 Enter MFA Code")
+        user_mfa = st.text_input("🔢 Enter MFA Code", key="login_mfa_code")
         if st.button("✅ Verify MFA"):
             if verify_mfa(st.session_state.pending_mfa_user, user_mfa):
                 st.session_state.authenticated = True
@@ -139,9 +110,9 @@ with login_tab:
 # REGISTER
 with register_tab:
     st.header("📝 Register")
-    new_username = st.text_input("📧 Email (Username)", key="register_username")
-    new_password = st.text_input("🔒 Password", type="password")
-    confirm_password = st.text_input("🔑 Confirm Password", type="password")
+    new_username = st.text_input("📧 Email (Username)", key="register_email")
+    new_password = st.text_input("🔒 Password", type="password", key="register_password")
+    confirm_password = st.text_input("🔑 Confirm Password", type="password", key="register_confirm_password")
     face_image = st.camera_input("📸 Register Face")
     voice_recording = st.file_uploader("🎙️ Record Your Voice (Upload WAV)", type=["wav"])
     
@@ -172,3 +143,24 @@ with reset_tab:
             st.success("📩 Reset code sent to your email!")
         else:
             st.error("❌ Email not registered!")
+
+# Set background
+def set_background():
+    github_image_url = "https://raw.githubusercontent.com/your-username/your-repo/main/back.jpg"
+    
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("{github_image_url}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+set_background()
